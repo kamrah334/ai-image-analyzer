@@ -3,28 +3,39 @@ const fs = require('fs');
 const axios = require('axios');
 const FormData = require('form-data');
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const config = { api: { bodyParser: false } };
 
 export default async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
 
+  console.log('API called');
   const form = new formidable.IncomingForm();
   form.parse(req, async (err, fields, files) => {
-    if (err) return res.status(500).json({ error: 'Form parse error' });
+    if (err) {
+      console.error('Form parse error:', err);
+      return res.status(500).json({ error: 'Form parse error', details: err.message });
+    }
+    console.log('Fields:', fields);
+    console.log('Files:', files);
+
+    if (!files.image) {
+      console.error('No image uploaded');
+      return res.status(400).json({ error: 'No image uploaded.' });
+    }
 
     const file = files.image;
     const DEEP_AI_API_KEY = process.env.DEEP_AI_API_KEY;
+    if (!DEEP_AI_API_KEY) {
+      console.error('Missing DeepAI API Key');
+      return res.status(500).json({ error: 'Missing DeepAI API Key' });
+    }
 
     try {
       const data = fs.readFileSync(file.filepath);
       const fd = new FormData();
       fd.append('image', data, file.originalFilename);
 
-      // Caption
+      // DeepAI API call...
       const titleRes = await axios.post(
         'https://api.deepai.org/api/image-captioning',
         fd,
@@ -44,6 +55,7 @@ export default async (req, res) => {
 
       res.status(200).json({ title, keywords });
     } catch (e) {
+      console.error('Error calling DeepAI:', e);
       res.status(500).json({ error: 'DeepAI error', details: e.message });
     }
   });
