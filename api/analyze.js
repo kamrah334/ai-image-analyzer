@@ -100,4 +100,11 @@ export default async (req, res) => {
       }
     }
   });
+  fetch('/api/analyze', { ... })
+  .then(res => res.json())
+  .then(data => {
+    if (data.error) {
+      console.error('API Error:', data.error, data.details);
+    }
+  });
 };
